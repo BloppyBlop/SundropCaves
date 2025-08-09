@@ -136,6 +136,19 @@ def confirm_overwrite_if_save_exists(path="save.json"):
         return ans == "y"
     return True
 
+def initialize_player(player):
+    player['name'] = ""
+    player['x'] = 0
+    player['y'] = 0
+    player['copper'] = 0
+    player['silver'] = 0
+    player['gold'] = 0
+    player['GP'] = 0
+    player['day'] = 1
+    player['steps'] = 0
+    player['turns'] = TURNS_PER_DAY
+
+
 #World Generation + Exploration Functions
 #------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------
@@ -252,21 +265,9 @@ def draw_view(game_map, fog, player, size=VIEW_SIZE):
     # bottom border
     print(viewport_border(size))
 
-#Player Stats + Movement
+#Main UI
 #------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------
-
-def initialize_player(player):
-    player['name'] = ""
-    player['x'] = 0
-    player['y'] = 0
-    player['copper'] = 0
-    player['silver'] = 0
-    player['gold'] = 0
-    player['GP'] = 0
-    player['day'] = 1
-    player['steps'] = 0
-    player['turns'] = TURNS_PER_DAY
 
 #checks if position is inside or outside the map
 def in_bounds(x, y):
