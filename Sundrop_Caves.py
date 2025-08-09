@@ -8,7 +8,7 @@ MAP_WIDTH = 0
 MAP_HEIGHT = 0
 
 TURNS_PER_DAY = 20
-WIN_GP = 500
+WIN_GP = 1000
 
 minerals = ['copper', 'silver', 'gold']
 mineral_names = {'C': 'copper', 'S': 'silver', 'G': 'gold'}
