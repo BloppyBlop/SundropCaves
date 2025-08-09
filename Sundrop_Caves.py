@@ -147,6 +147,7 @@ def initialize_player(player):
     player['day'] = 1
     player['steps'] = 0
     player['turns'] = TURNS_PER_DAY
+    player['pickaxe_level'] = 1
 
 
 #World Generation + Exploration Functions
@@ -264,6 +265,57 @@ def draw_view(game_map, fog, player, size=VIEW_SIZE):
 
     # bottom border
     print(viewport_border(size))
+
+#Mining Features
+#------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------
+
+def get_tile_under_player(player, game_map):
+    return game_map[player['y']][player['x']]
+
+def can_mine(tile, player):
+    if tile == "C":  # copper
+        return player['pickaxe_level'] >= 1
+    if tile == "S":  # silver
+        return player['pickaxe_level'] >= 2
+    if tile == "G":  # gold
+        return player['pickaxe_level'] >= 3
+    return False
+
+def ore_value(ore_type):
+    if ore_type == "C":
+        return randint(*prices['copper'])
+    if ore_type == "S":
+        return randint(*prices['silver'])
+    if ore_type == "G":
+        return randint(*prices['gold'])
+    return 0
+
+def add_ore_to_inventory(player, ore_tile):
+    if ore_tile == "C":
+        player['copper'] += 1
+    elif ore_tile == "S":
+        player['silver'] += 1
+    elif ore_tile == "G":
+        player['gold'] += 1
+
+def award_ore_gp(player, tile):
+    gp_gained = ore_value(tile)
+    player['GP'] += gp_gained
+    print(f"You mined {mineral_names[tile]} worth {gp_gained} GP!")
+
+def consume_tile_and_turn(game_map, player):
+    game_map[player['y']][player['x']] = " "
+    player['turns'] -= 1
+
+def mine_tile(player, game_map):
+    tile = get_tile_under_player(player, game_map)
+    if can_mine(tile, player):
+        add_ore_to_inventory(player, tile)
+        award_ore_gp(player, tile)
+        consume_tile_and_turn(game_map, player)
+    else:
+        print("Your pickaxe isn't strong enough for this ore!")
 
 #Main UI
 #------------------------------------------------------------------------------------
@@ -405,6 +457,7 @@ def try_step(dir_key, game_map, fog, player):
 
 def post_move(fog, player):
     clear_fog(fog, player)
+    mine_tile(player, game_map)
 
 def show_mine_menu(game_map, fog, player):
     #draw_map(game_map, fog, player)
@@ -433,7 +486,7 @@ def show_mine_menu(game_map, fog, player):
         draw_map(game_map, fog, player)
         press_to_return()
     elif try_step(playerinput, game_map, fog, player):
-        post_move(fog, player)
+        post_move(fog, player, game_map)
 
 def end_day(player):
     print("Your day is over! Heading back to town...")
