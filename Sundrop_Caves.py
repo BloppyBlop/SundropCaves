@@ -148,6 +148,7 @@ def initialize_player(player):
     player['steps'] = 0
     player['turns'] = TURNS_PER_DAY
     player['pickaxe_level'] = 1
+    player['capacity'] = 10
 
 
 #World Generation + Exploration Functions
@@ -303,6 +304,7 @@ def award_ore_gp(player, tile):
     gp_gained = ore_value(tile)
     player['GP'] += gp_gained
     print(f"You mined {mineral_names[tile]} worth {gp_gained} GP!")
+    press_to_return()
 
 def consume_tile_and_turn(game_map, player):
     game_map[player['y']][player['x']] = " "
@@ -369,6 +371,25 @@ def handle_turns(fog, player, game_map):
     if player['turns'] <= 0:
         end_day(player)
 
+#Shop Upgrades
+#------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------
+def upgrade_price(player):
+    return player['capacity'] * 2
+
+def can_afford_upgrade(player):
+    return player['GP'] >= upgrade_price(player)
+
+def upgrade_backpack(player):
+    price = upgrade_price(player)
+    if player['GP'] >= price:
+        player['GP'] -= price
+        player['capacity'] += 2
+        print(f"Backpack upgraded! Capacity is now {player['capacity']}.")
+    else:
+        print("Not enough GP for upgrade.")
+        press_to_return()
+
 #Main UI
 #------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------
@@ -418,6 +439,8 @@ def show_shop_menu(player):
     playerinput = get_key()
     if playerinput == "l":
         game_state = GAMESTATE_TOWN
+    elif playerinput == "b":
+        upgrade_backpack(player)
 
 def get_player_name():
     clear_screen()
@@ -491,7 +514,7 @@ def show_mine_menu(game_map, fog, player):
     draw_view(game_map, fog, player, size=VIEW_SIZE)
     print("----- MINE MENU -----")
     print("(WASD) to move")
-    print(f"Turns left: {player['turns']}    Load: 0 / 12    Steps: 22")
+    print(f"Turns left: {player['turns']}    Load: Load: {player['copper']+player['silver']+player['gold']}/{player['capacity']}    Steps: {player['steps']}")
     print("P = Portal")
     print("I = Information")
     print("M = Map")
