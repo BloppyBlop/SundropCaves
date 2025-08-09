@@ -337,6 +337,7 @@ def is_walkable(x, y, game_map, player):
         return can_mine(tile, player)
 
     return tile in WALKABLE
+
 def try_step(dir_key, game_map, fog, player):
     if dir_key not in MOVES:
         return False
@@ -346,7 +347,7 @@ def try_step(dir_key, game_map, fog, player):
     dx, dy = MOVES[dir_key]
     nx, ny = player['x'] + dx, player['y'] + dy
 
-    if is_walkable(nx, ny, game_map):
+    if is_walkable(nx, ny, game_map, player):
         player['x'], player['y'] = nx, ny
         player['steps'] += 1
         player['turns'] -= 1
