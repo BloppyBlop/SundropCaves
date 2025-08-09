@@ -350,12 +350,15 @@ def try_step(dir_key, game_map, fog, player):
     if is_walkable(nx, ny, game_map, player):
         player['x'], player['y'] = nx, ny
         player['steps'] += 1
-        player['turns'] -= 1
-        if player['turns'] <= 0:
-            end_day(player)
-            return True
+        return True  
         
     return True
+
+def handle_turns(fog, player, game_map):
+    player['turns'] -= 1
+    post_move(fog, player, game_map)
+    if player['turns'] <= 0:
+        end_day(player)
 
 #Main UI
 #------------------------------------------------------------------------------------
@@ -499,7 +502,7 @@ def show_mine_menu(game_map, fog, player):
         draw_map(game_map, fog, player)
         press_to_return()
     elif try_step(playerinput, game_map, fog, player):
-        post_move(fog, player, game_map)
+        handle_turns(fog, player, game_map)
 
 def end_day(player):
     print("Your day is over! Heading back to town...")
