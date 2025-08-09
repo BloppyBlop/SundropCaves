@@ -270,6 +270,17 @@ def draw_view(game_map, fog, player, size=VIEW_SIZE):
 #Mining Features
 #------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------
+def pieces_from_node(tile):
+    if tile == "C": return randint(1, 5)
+    if tile == "S": return randint(1, 3)
+    if tile == "G": return randint(1, 2)
+    return 0
+
+def current_load(p):
+    return p.get('copper', 0) + p.get('silver', 0) + p.get('gold', 0)
+
+def is_full(p):
+    return current_load(p) >= p['capacity']
 
 def get_tile_under_player(player, game_map):
     return game_map[player['y']][player['x']]
@@ -292,18 +303,17 @@ def ore_value(ore_type):
         return randint(*prices['gold'])
     return 0
 
-def add_ore_to_inventory(player, ore_tile):
+def add_ore_to_inventory(player, ore_tile, count):
     if ore_tile == "C":
-        player['copper'] += 1
+        player['copper'] += count
     elif ore_tile == "S":
-        player['silver'] += 1
+        player['silver'] += count
     elif ore_tile == "G":
-        player['gold'] += 1
-
-def award_ore_gp(player, tile):
-    gp_gained = ore_value(tile)
-    player['GP'] += gp_gained
-    print(f"You mined {mineral_names[tile]} worth {gp_gained} GP!")
+        player['gold'] += count
+        
+def award_ore_info(ore_tile, count):
+    ore_name = mineral_names[ore_tile]  # "C" -> "copper"
+    print(f"You mined {count} piece(s) of {ore_name}!")
     press_to_return()
 
 def consume_tile_and_turn(game_map, player):
@@ -313,12 +323,31 @@ def consume_tile_and_turn(game_map, player):
 def mine_tile(player, game_map):
     tile = get_tile_under_player(player, game_map)
 
-    # only do anything if on ore
-    if tile not in {"C", "S", "G"}:
+    if tile not in {"C", "S", "G"}: # only do anything if on ore
         return
-    add_ore_to_inventory(player, tile)
-    award_ore_gp(player, tile)
+
+    pieces = pieces_from_node(tile) # how many pieces this node gives
+
+    remaining = player['capacity'] - current_load(player) # respect remaining backpack space
+    mined = max(0, min(pieces, remaining))
+
+    if mined == 0:
+        print("Your backpack is full! You can’t carry any more.")
+        press_to_return()
+        return
+
+    # add to inventory and report
+    add_ore_to_inventory(player, tile, mined)
+    award_ore_info(tile, mined)
+
+    # consume the node and keep exploring
     game_map[player['y']][player['x']] = " "
+
+def current_load(p):
+    return p.get('copper',0) + p.get('silver',0) + p.get('gold',0)
+
+def is_full(p):
+    return current_load(p) >= p['capacity']
 
 #MPlayer Movement
 #------------------------------------------------------------------------------------
@@ -355,12 +384,18 @@ def try_step(dir_key, game_map, player):
 
     tile = game_map[ny][nx]
 
-    #can't enter tiles you can't mine
-    if tile in {"C", "S", "G"} and not can_mine(tile, player):
-        print("Your pickaxe isn't strong enough for this ore!")
-        press_to_return()
-        return False
+    # ore gate: can't enter if full or can't mine
+    if tile in {"C", "S", "G"}:
+        if is_full(player):
+            print("You can't carry any more, so you can't go that way.")
+            press_to_return()
+            return False
+        if not can_mine(tile, player):
+            print("Your pickaxe isn't strong enough for this ore!")
+            press_to_return()
+            return False
 
+    # success
     player['x'], player['y'] = nx, ny
     player['steps'] += 1
     return True
@@ -386,6 +421,7 @@ def upgrade_backpack(player):
         player['GP'] -= price
         player['capacity'] += 2
         print(f"Backpack upgraded! Capacity is now {player['capacity']}.")
+        press_to_return()
     else:
         print("Not enough GP for upgrade.")
         press_to_return()
@@ -514,7 +550,7 @@ def show_mine_menu(game_map, fog, player):
     draw_view(game_map, fog, player, size=VIEW_SIZE)
     print("----- MINE MENU -----")
     print("(WASD) to move")
-    print(f"Turns left: {player['turns']}    Load: Load: {player['copper']+player['silver']+player['gold']}/{player['capacity']}    Steps: {player['steps']}")
+    print(f"Turns left: {player['turns']}    Load: {current_load(player)}/{player['capacity']}    Steps: {player['steps']}")
     print("P = Portal")
     print("I = Information")
     print("M = Map")
