@@ -455,7 +455,7 @@ def try_step(dir_key, game_map, fog, player):
 
     return True
 
-def post_move(fog, player):
+def post_move(fog, player, game_map):
     clear_fog(fog, player)
     mine_tile(player, game_map)
 
