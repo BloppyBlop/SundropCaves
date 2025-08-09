@@ -326,9 +326,17 @@ def post_move(fog, player, game_map):
     if player['turns'] <= 0:
         end_day(player)
 
-def is_walkable(x, y, game_map):
-    return in_bounds(x, y) and game_map[y][x] in WALKABLE
+def is_walkable(x, y, game_map, player):
+    if not in_bounds(x, y):
+        return False
 
+    tile = game_map[y][x]
+    
+    # if it's an ore, you can only walk on it if you can mine it
+    if tile in {"C", "S", "G"}:
+        return can_mine(tile, player)
+
+    return tile in WALKABLE
 def try_step(dir_key, game_map, fog, player):
     if dir_key not in MOVES:
         return False
