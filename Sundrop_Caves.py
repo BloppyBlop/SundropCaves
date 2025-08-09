@@ -310,12 +310,13 @@ def consume_tile_and_turn(game_map, player):
 
 def mine_tile(player, game_map):
     tile = get_tile_under_player(player, game_map)
-    if can_mine(tile, player):
-        add_ore_to_inventory(player, tile)
-        award_ore_gp(player, tile)
-        consume_tile_and_turn(game_map, player)
-    else:
-        print("Your pickaxe isn't strong enough for this ore!")
+
+    # only do anything if on ore
+    if tile not in {"C", "S", "G"}:
+        return
+    add_ore_to_inventory(player, tile)
+    award_ore_gp(player, tile)
+    game_map[player['y']][player['x']] = " "
 
 #MPlayer Movement
 #------------------------------------------------------------------------------------
@@ -338,20 +339,28 @@ def is_walkable(x, y, game_map, player):
 
     return tile in WALKABLE
 
-def try_step(dir_key, game_map, fog, player):
-    if dir_key not in MOVES:
+def try_step(dir_key, game_map, player):
+    if dir_key not in MOVES or player['turns'] <= 0:
         return False
-    if player['turns'] <= 0:
-        return False
-    
+
     dx, dy = MOVES[dir_key]
     nx, ny = player['x'] + dx, player['y'] + dy
 
-    if is_walkable(nx, ny, game_map, player):
-        player['x'], player['y'] = nx, ny
-        player['steps'] += 1
-        return True  
-        
+    if not in_bounds(nx, ny):
+        print("You bump into the wall.")
+        press_to_return()
+        return False
+
+    tile = game_map[ny][nx]
+
+    #can't enter tiles you can't mine
+    if tile in {"C", "S", "G"} and not can_mine(tile, player):
+        print("Your pickaxe isn't strong enough for this ore!")
+        press_to_return()
+        return False
+
+    player['x'], player['y'] = nx, ny
+    player['steps'] += 1
     return True
 
 def handle_turns(fog, player, game_map):
@@ -501,7 +510,7 @@ def show_mine_menu(game_map, fog, player):
         clear_screen()
         draw_map(game_map, fog, player)
         press_to_return()
-    elif try_step(playerinput, game_map, fog, player):
+    elif try_step(playerinput, game_map, player):
         handle_turns(fog, player, game_map)
 
 def end_day(player):
