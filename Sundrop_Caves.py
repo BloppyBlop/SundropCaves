@@ -317,6 +317,32 @@ def mine_tile(player, game_map):
     else:
         print("Your pickaxe isn't strong enough for this ore!")
 
+#MPlayer Movement
+#------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------
+
+def is_walkable(x, y, game_map):
+    return in_bounds(x, y) and game_map[y][x] in WALKABLE
+
+def try_step(dir_key, game_map, fog, player):
+    if dir_key not in MOVES:
+        return False  # not a movement key
+    
+    if player['turns'] <= 0:  # already out of turns
+        return False
+    
+    dx, dy = MOVES[dir_key]
+    nx, ny = player['x'] + dx, player['y'] + dy
+
+    if is_walkable(nx, ny, game_map):
+        player['x'], player['y'] = nx, ny
+        player['steps'] += 1
+        player['turns'] -= 1  # use a turn when moving
+        if player['turns'] <= 0:
+            end_day(player)  # new helper function
+
+    return True
+
 #Main UI
 #------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------
@@ -431,29 +457,6 @@ def show_town_menu():
     elif playerinput == "v":
         save_game(game_map, fog, player)
         press_to_return()
-
-def is_walkable(x, y, game_map):
-    return in_bounds(x, y) and game_map[y][x] in WALKABLE
-
-    if player['turns'] <= 0:
-        end_day(player)  # new helper function
-
-def try_step(dir_key, game_map, fog, player):
-    if dir_key not in MOVES:
-        return False  # not a movement key
-    
-    if player['turns'] <= 0:  # already out of turns
-        return False
-    
-    dx, dy = MOVES[dir_key]
-    nx, ny = player['x'] + dx, player['y'] + dy
-
-    if is_walkable(nx, ny, game_map):
-        player['x'], player['y'] = nx, ny
-        player['steps'] += 1
-        player['turns'] -= 1  # use a turn when moving
-
-    return True
 
 def post_move(fog, player, game_map):
     clear_fog(fog, player)
