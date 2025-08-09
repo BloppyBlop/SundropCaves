@@ -382,9 +382,6 @@ def show_town_menu():
 def is_walkable(x, y, game_map):
     return in_bounds(x, y) and game_map[y][x] in WALKABLE
 
-def post_move(fog, player):
-    clear_fog(fog, player)
-
     if player['turns'] <= 0:
         end_day(player)  # new helper function
 
@@ -404,6 +401,9 @@ def try_step(dir_key, game_map, fog, player):
         player['turns'] -= 1  # use a turn when moving
 
     return True
+
+def post_move(fog, player):
+    clear_fog(fog, player)
 
 def show_mine_menu(game_map, fog, player):
     #draw_map(game_map, fog, player)
@@ -432,7 +432,7 @@ def show_mine_menu(game_map, fog, player):
         draw_map(game_map, fog, player)
         press_to_return()
     elif try_step(playerinput, game_map, fog, player):
-        post_move(player, fog)
+        post_move(fog, player)
 
 def end_day(player):
     print("Your day is over! Heading back to town...")
