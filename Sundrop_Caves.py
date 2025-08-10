@@ -66,6 +66,8 @@ prices['copper'] = (1, 3)
 prices['silver'] = (5, 8)
 prices['gold'] = (10, 18)
 
+TORCH_PRICE = 50
+
 #Other Functions
 #------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------
@@ -155,6 +157,7 @@ def initialize_player(player):
     player['capacity'] = 10
     player[PORTAL_KEY_X] = 0
     player[PORTAL_KEY_Y] = 0
+    player['has_torch'] = False
 
 
 #World Generation + Exploration Functions
@@ -521,6 +524,32 @@ def shop_pickaxe_line(player):
     if next_level is None:
         return "(P)ickaxe upgrade: MAX LEVEL"
     return f"(P)ickaxe upgrade to Level {next_level} to mine {unlocks} for {price} GP"
+
+def shop_torch_line(player):
+    if player.get('has_torch'):
+        return "(M)agic torch: OWNED (view 5x5)"
+    return f"(M)agic torch that increases view to 5x5 for {TORCH_PRICE} GP"
+
+def torch_owned(player):
+    return player.get('has_torch', False)
+
+def buy_magic_torch(player):
+    global VIEW_SIZE
+    if torch_owned(player):
+        print("You already own the magic torch.")
+        press_to_return()
+        return
+    if player['GP'] < TORCH_PRICE:
+        print(f"Not enough GP. You need {TORCH_PRICE} GP for the magic torch.")
+        press_to_return()
+        return
+    player['GP'] -= TORCH_PRICE
+    player['has_torch'] = True
+    VIEW_SIZE = 5      # immediately expand the viewport
+    print("The cavern glows! Your view is now 5x5.")
+    press_to_return()
+
+
 #Main UI
 #------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------
@@ -560,11 +589,12 @@ def show_shop_menu(player):
     price, next_cap = get_backpack_upgrade_info(player)
     pickaxe_line = shop_pickaxe_line(player)
     backpack_line = shop_backpack_line(player)
+    torch_line = shop_torch_line(player)
     print()
     print("----------------------- Shop Menu -------------------------")
     print(pickaxe_line)
     print(backpack_line)
-    print("(M)agic torch that increases view to 5x5 for 50 GP")
+    print(torch_line)
     print("(L)eave shop")
     print("-----------------------------------------------------------")
     print(f"Your GP: {player['GP']}")
@@ -578,8 +608,8 @@ def show_shop_menu(player):
     elif playerinput == "p":
         upgrade_pickaxe(player)
     elif playerinput == "m":
-        print("Magic torch not implemented yet.")
-        press_to_return()
+        buy_magic_torch(player)
+        
 
 def get_player_name():
     clear_screen()
@@ -690,23 +720,29 @@ def show_mine_menu(game_map, fog, player):
 
 def end_day(player):
     place_portal_here(player)
-    print("You are exhausted.")
-    print("You place your portal stone here and zap back to town. ")
     total = calc_sale_total(player)
     if total > 0:
         deposit_gp(player, total)
         clear_inventory(player)
-        announce_sale(total)  
-        if maybe_win(player):
-            return
+    if maybe_win(player):
+        return
+    print("You are exhausted.")
+    print("You place your portal stone here and zap back to town.")
+    if total > 0:
+        print(f"You sold your haul for {total} GP!")
+        print(f"You now have {player['GP']} GP!")
+    else:
+        print("You have nothing to sell.")
+        print(f"You still have {player['GP']} GP!")
+    press_to_return()
+
     player['day'] += 1
     player['turns'] = TURNS_PER_DAY
     global game_state
     game_state = GAMESTATE_TOWN
-    if total == 0:
-        press_to_return()
 
 def maybe_win(player):
+    global game_state
     if player['GP'] >= WIN_GP:
         clear_screen()
         print("-----------------------------------------------------------")
@@ -716,7 +752,6 @@ def maybe_win(player):
         print(f"And it only took you {player['day']} days and {player['steps']} steps! You win!")
         print("-----------------------------------------------------------")
         press_to_return()
-        global game_state
         game_state = GAMESTATE_MAIN
         return True
     return False
