@@ -149,6 +149,8 @@ def initialize_player(player):
     player['turns'] = TURNS_PER_DAY
     player['pickaxe_level'] = 1
     player['capacity'] = 10
+    player[PORTAL_KEY_X] = 0
+    player[PORTAL_KEY_Y] = 0
 
 
 #World Generation + Exploration Functions
@@ -197,10 +199,10 @@ def get_tile_marker(x, y, game_map, player):
 
     if current_coord == town_coord:
         return MAPMARKER_TOWN
-    elif current_coord == player_coord:
-        return MAPMARKER_PLAYER
     elif current_coord == portal_coord:
         return MAPMARKER_PORTAL
+    elif current_coord == player_coord:
+        return MAPMARKER_PLAYER
     else:
         return game_map[y][x]
 
@@ -243,6 +245,10 @@ def viewport_tile(x, y, px, py, game_map, player): #decide what to show at (x,y)
         return MAPMARKER_PLAYER
     if not in_bounds(x, y):
         return WALL_CHAR
+    
+    portal_pos = (player.get(PORTAL_KEY_X), player.get(PORTAL_KEY_Y))
+    if (x, y) == portal_pos:
+        return game_map[y][x]
     return get_tile_marker(x, y, game_map, player)
 
 
@@ -353,6 +359,10 @@ def current_load(p):
 
 def is_full(p):
     return current_load(p) >= p['capacity']
+
+def place_portal_here(player):
+    player[PORTAL_KEY_X] = player['x']
+    player[PORTAL_KEY_Y] = player['y']
 
 #MPlayer Movement
 #------------------------------------------------------------------------------------
@@ -596,6 +606,7 @@ def show_mine_menu(game_map, fog, player):
     print()
     playerinput = get_key("Action?")
     if playerinput == "p":
+        place_portal_here(player)
         print("You place your portal stone here and zap back to town. ")
         total = calc_sale_total(player)
         if total > 0:
@@ -621,6 +632,7 @@ def show_mine_menu(game_map, fog, player):
         handle_turns(fog, player, game_map)
 
 def end_day(player):
+    place_portal_here(player)
     print("You are exhausted.")
     print("You place your portal stone here and zap back to town. ")
     total = calc_sale_total(player)
