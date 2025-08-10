@@ -144,10 +144,10 @@ def load_game(game_map, fog, player, path="save.json"):
         fog.clear()
         fog.extend(state["fog"]) #Replace current fog with the saved fog grid (again, mutate in-place).
 
-        if "map" in state:
-            game_map.clear()
-            for row in state["map"]:
-                game_map.append(row[:])
+        if "map" in state: #Checks that the loaded save file actually contains a "map" entry. If it doesn’t, we skip the restore so we don’t crash.
+            game_map.clear() #Empties the existing game_map in place.
+            for row in state["map"]: #Loops through each saved row from the file.
+                game_map.append(row[:]) #builds the new map contents into the existing game_map object.
 
         print("Game loaded!")
         return True
@@ -157,24 +157,24 @@ def load_game(game_map, fog, player, path="save.json"):
         return False #If the save file doesn’t exist (FileNotFoundError) or the JSON is missing expected keys like "player" or "fog" (KeyError), show a message, wait for a key, and return False.
 
 #------------------------------------------------------------------------------------
-#Gameflow
+#Scores
 #------------------------------------------------------------------------------------
 
-def _score_key(rec):
+def _score_key(rec): #sorts by fewest days, then fewest steps, then more gp because of the negative sign, then name for determining ties. 
     return (rec.get("days", 0), rec.get("steps", 0), -rec.get("gp", 0), rec.get("name","").lower())
 
-def load_scores(path=SCORES_PATH):
+def load_scores(path=SCORES_PATH): #reads the scores.json file (or returns empty list on first run/corruption).
     try:
         with open(path, "r") as f:
             return json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         return []
 
-def save_scores(scores, path=SCORES_PATH):
+def save_scores(scores, path=SCORES_PATH): #overwrites scores.json with the given list.
     with open(path, "w") as f:
         json.dump(scores, f)
 
-def add_score_from_player(player, path=SCORES_PATH):
+def add_score_from_player(player, path=SCORES_PATH): #builds a score record from the current player, appends, sorts using _score_key, and saves.
     scores = load_scores(path)
     rec = {
         "name": player.get("name","Unknown"),
@@ -186,7 +186,7 @@ def add_score_from_player(player, path=SCORES_PATH):
     scores.sort(key=_score_key)
     save_scores(scores, path)
 
-def show_high_scores(path=SCORES_PATH):
+def show_high_scores(path=SCORES_PATH): #clears screen; formats and prints top 5 records; waits for a key.
     clear_screen()
     print("----- Top Miners of Sundrop Mountain -----")
     scores = load_scores(path)
@@ -225,8 +225,7 @@ def load_map(filename, map_struct):
 
     map_file.close()
 
-# This function clears the fog of war at the 3x3 square around the player
-def clear_fog(fog, player):
+def clear_fog(fog, player): # This function clears the fog of war at the 3x3 square around the player
     px, py = player['x'], player['y']
     
     for dy in range(-VIEW_RADIUS, VIEW_RADIUS + 1):
@@ -235,12 +234,12 @@ def clear_fog(fog, player):
             if 0 <= ny < MAP_HEIGHT and 0 <= nx < MAP_WIDTH:
                 fog[ny][nx] = FOG_EXPLORED
 
-def initialize_fog(fog):
+def initialize_fog(fog): #fills the fog grid with ? characters, matching map size.
     fog.clear()
     for i in range(MAP_HEIGHT): #for 
         fog.append([FOG_UNEXPLORED] * MAP_WIDTH)
 
-def get_tile_marker(x, y, game_map, player):
+def get_tile_marker(x, y, game_map, player): #decides which char to show at a coordinate, prioritizing town, portal, player, then the underlying tile from game_map.
     current_coord = (x, y)
     player_coord = (player['x'], player['y'])
     portal_coord = (player.get(PORTAL_KEY_X), player.get(PORTAL_KEY_Y))
@@ -255,7 +254,7 @@ def get_tile_marker(x, y, game_map, player):
     else:
         return game_map[y][x]
 
-def map_tile(x, y, game_map, fog, player): #what to show on the full map
+def map_tile(x, y, game_map, fog, player): #returns ? if that spot is still fogged. otherwise delegates to get_tile_marker().
     if fog[y][x] == FOG_UNEXPLORED:
         return MAPMARKER_FOG
     return get_tile_marker(x, y, game_map, player)
@@ -264,7 +263,7 @@ def map_tile(x, y, game_map, fog, player): #what to show on the full map
 #Player
 #------------------------------------------------------------------------------------
 
-def initialize_player(player):
+def initialize_player(player): #sets default stats and flags
     player['name'] = ""
     player['x'] = 0
     player['y'] = 0
@@ -281,13 +280,13 @@ def initialize_player(player):
     player[PORTAL_KEY_Y] = 0
     player['has_torch'] = False
 
-def current_load(p):
+def current_load(p): #total ore pieces in the backpack.
     return p.get('copper', 0) + p.get('silver', 0) + p.get('gold', 0)
 
-def is_full(p):
+def is_full(p): #returns whether current_load >= capacity.
     return current_load(p) >= p['capacity']
 
-def place_portal_here(player):
+def place_portal_here(player): #records current (x,y) into the player’s portal fields.
     player[PORTAL_KEY_X] = player['x']
     player[PORTAL_KEY_Y] = player['y']
 
@@ -295,8 +294,7 @@ def place_portal_here(player):
 #Drawing
 #------------------------------------------------------------------------------------
 
-# This function draws the entire map, covered by the fog
-def draw_map(game_map, fog, player):
+def draw_map(game_map, fog, player): #prints a top border, then each map row with left/right borders, then the bottom border. Each row is built with map_tile() per column.
     print(viewport_border(MAP_WIDTH))  # top border
 
     for y in range(MAP_HEIGHT):
@@ -326,10 +324,10 @@ def draw_view(game_map, fog, player, size=VIEW_SIZE):
     # bottom border
     print(viewport_border(size))
 
-def viewport_border(inner_width):
+def viewport_border(inner_width): #returns the +----+ style border string.
     return BORDER_CORNER + (BORDER_HORIZONTAL * inner_width) + BORDER_CORNER
 
-def viewport_half(size):
+def viewport_half(size): #integer half-size; a size of 3 yields 1 (so rows are -1,0,1).
     return size // 2
 
 def viewport_tile(x, y, px, py, game_map, player): #decide what to show at (x,y) in the viewport.
@@ -347,7 +345,7 @@ def viewport_tile(x, y, px, py, game_map, player): #decide what to show at (x,y)
 #Mining
 #------------------------------------------------------------------------------------
 
-def replenish_nodes(game_map, chance=0.2):
+def replenish_nodes(game_map, chance=0.2): 
     restored = 0
     for y in range(MAP_HEIGHT):
         for x in range(MAP_WIDTH):
@@ -521,19 +519,19 @@ def sell_haul(player, announce=True):
         deposit_gp(player, total)
         clear_inventory(player)
         if announce:
-            announce_sale(total)       
+            announce_sale(total)
     else:
         if announce:
-            announce_no_sale(player)   
+            announce_no_sale(player)
     return total
 
-def upgrade_price(player):
+def upgrade_price(player): #dynamic backpack price (twice current capacity).
     return player['capacity'] * 2
 
 def can_afford_upgrade(player):
     return player['GP'] >= upgrade_price(player)
 
-def upgrade_backpack(player):
+def upgrade_backpack(player): #convenience boolean.
     price = upgrade_price(player)
     if player['GP'] >= price:
         player['GP'] -= price
@@ -544,14 +542,14 @@ def upgrade_backpack(player):
         print(f"Not enough GP. You need {price} GP to upgrade your backpack.")
         press_to_return()
 
-def calc_sale_total(player):
+def calc_sale_total(player): #checks GP, deducts price, adds +2 capacity, pauses with a message.
     total = 0
     for _ in range(player['copper']): total += ore_value("C")
     for _ in range(player['silver']): total += ore_value("S")
     for _ in range(player['gold']):   total += ore_value("G")
     return total
 
-def deposit_gp(player, amount):
+def deposit_gp(player, amount): #
     player['GP'] += amount
 
 def clear_inventory(player):
@@ -822,7 +820,7 @@ def initialize_game(game_map, fog, player):
     clear_fog(fog, player)  
 
 def end_day(player):
-    place_portal_here(player)
+    place_portal_here(player) #place_portal_here(player) so the town portal is where you ended.
     print("You are exhausted.")
     print("You place your portal stone here and zap back to town.")
     sell_haul(player, announce=True)
@@ -849,7 +847,7 @@ def maybe_win(player):
     return False 
 
 #--------------------------- MAIN GAME ---------------------------
-# TODO: The game!
+# TODO: The game! Main loop using a finite state machine. 
 clear_screen()
 while game_state != GAMESTATE_QUIT:
     if game_state == GAMESTATE_MAIN:
