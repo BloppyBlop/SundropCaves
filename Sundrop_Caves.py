@@ -668,6 +668,8 @@ def show_mine_menu(game_map, fog, player):
             deposit_gp(player, total)
             clear_inventory(player)
             announce_sale(total)
+            if maybe_win(player):
+                return
         else:
             announce_no_sale(player)
         player['day'] += 1
@@ -695,12 +697,29 @@ def end_day(player):
         deposit_gp(player, total)
         clear_inventory(player)
         announce_sale(total)  
+        if maybe_win(player):
+            return
     player['day'] += 1
     player['turns'] = TURNS_PER_DAY
     global game_state
     game_state = GAMESTATE_TOWN
     if total == 0:
         press_to_return()
+
+def maybe_win(player):
+    if player['GP'] >= WIN_GP:
+        clear_screen()
+        print("-----------------------------------------------------------")
+        print(f"Woo-hoo! Well done, {player['name']}, you have {player['GP']} GP!")
+        print("You now have enough to retire and play video games every day.")
+        # use current day/steps for stats
+        print(f"And it only took you {player['day']} days and {player['steps']} steps! You win!")
+        print("-----------------------------------------------------------")
+        press_to_return()
+        global game_state
+        game_state = GAMESTATE_MAIN
+        return True
+    return False
 
 #--------------------------- MAIN GAME ---------------------------
 # TODO: The game!
