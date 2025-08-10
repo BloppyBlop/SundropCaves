@@ -450,7 +450,7 @@ def upgrade_backpack(player):
         print(f"Backpack upgraded! Capacity is now {player['capacity']}.")
         press_to_return()
     else:
-        print("Not enough GP for upgrade.")
+        print(f"Not enough GP. You need {price} GP to upgrade your backpack.")
         press_to_return()
 
 def calc_sale_total(player):
@@ -483,6 +483,40 @@ def get_backpack_upgrade_info(player):
     next_cap = player['capacity'] + 2
     return price, next_cap
 
+def shop_backpack_line(player):
+    price, next_cap = get_backpack_upgrade_info(player)
+    return f"(B)ackpack upgrade to carry {next_cap} items for {price} GP"
+
+def get_pickaxe_upgrade_info(player):
+    current_level = player['pickaxe_level']
+    if current_level > len(pickaxe_upgrades):
+        return None, None, None  
+    price, unlocks = pickaxe_upgrades[current_level - 1]
+    next_level = current_level + 1
+    return next_level, price, unlocks
+
+def upgrade_pickaxe(player):
+    next_level, price, unlocks = get_pickaxe_upgrade_info(player)
+    if next_level is None:
+        print("Your pickaxe is already at the maximum level.")
+        press_to_return()
+        return
+
+    if player['GP'] < price:
+        print(f"Not enough GP. You need {price} GP to upgrade your pickaxe.")
+        press_to_return()
+        return
+
+    player['GP'] -= price
+    player['pickaxe_level'] = next_level
+    print(f"Pickaxe upgraded to level {next_level}! You can now mine {unlocks} ore.")
+    press_to_return()
+
+def shop_pickaxe_line(player):
+    next_level, price, unlocks = get_pickaxe_upgrade_info(player)
+    if next_level is None:
+        return "(P)ickaxe upgrade: MAX LEVEL"
+    return f"(P)ickaxe upgrade to Level {next_level} to mine {unlocks} for {price} GP"
 #Main UI
 #------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------
@@ -521,10 +555,12 @@ def quit_to_main_menu():
 def show_shop_menu(player):
     global game_state
     price, next_cap = get_backpack_upgrade_info(player)
+    pickaxe_line = shop_pickaxe_line(player)
+    backpack_line = shop_backpack_line(player)
     print()
     print("----------------------- Shop Menu -------------------------")
-    print("(P)ickaxe upgrade to Level 2 to mine silver ore for 50 GP")
-    print(f"(B)ackpack upgrade to carry {next_cap} items for {price} GP")
+    print(pickaxe_line)
+    print(backpack_line)
     print("(M)agic torch that increases view to 5x5 for 50 GP")
     print("(L)eave shop")
     print("-----------------------------------------------------------")
@@ -535,14 +571,9 @@ def show_shop_menu(player):
         game_state = GAMESTATE_TOWN
         return
     elif playerinput == "b":
-        if can_afford_upgrade(player):
-            upgrade_backpack(player)
-        else:
-            print("Not enough GP for upgrade.")
-            press_to_return()
+        upgrade_backpack(player)
     elif playerinput == "p":
-        print("Pickaxe upgrade not implemented yet.")
-        press_to_return()
+        upgrade_pickaxe(player)
     elif playerinput == "m":
         print("Magic torch not implemented yet.")
         press_to_return()
