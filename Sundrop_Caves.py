@@ -487,6 +487,10 @@ def shop_backpack_line(player):
     price, next_cap = get_backpack_upgrade_info(player)
     return f"(B)ackpack upgrade to carry {next_cap} items for {price} GP"
 
+def pickaxe_name(player):
+    idx = max(0, min(player['pickaxe_level'] - 1, len(minerals) - 1))
+    return minerals[idx]
+
 def get_pickaxe_upgrade_info(player):
     current_level = player['pickaxe_level']
     if current_level > len(pickaxe_upgrades):
@@ -531,8 +535,7 @@ def show_information(player):
     print("----- Player Information -----")
     print(f"Name: {player['name']} ")
     print(f"Portal Position: ({player.get(PORTAL_KEY_X)}, {player.get(PORTAL_KEY_Y)})")
-    print(f"Pickaxe Level: {player['pickaxe_level']} ({minerals[player['pickaxe_level'] - 1]})")
-    print("------------------------------")
+    print(f"Pickaxe Level: {player['pickaxe_level']} ({pickaxe_name(player)})")
     print(f"Load: {current_load(player)}")
     print("------------------------------")
     print(f"GP: {player['GP']}")
