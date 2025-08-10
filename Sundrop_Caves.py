@@ -55,7 +55,11 @@ WIN_GP = 500
 
 minerals = ['copper', 'silver', 'gold']
 mineral_names = {'C': 'copper', 'S': 'silver', 'G': 'gold'}
-pickaxe_price = [50, 150]
+
+pickaxe_upgrades = [
+    (50, "silver"),
+    (150, "gold"),
+]
 
 prices = {}
 prices['copper'] = (1, 3)
@@ -474,6 +478,11 @@ def announce_no_sale(player):
     print(f"You still have {player['GP']} GP!")
     press_to_return()    
 
+def get_backpack_upgrade_info(player):
+    price = upgrade_price(player)
+    next_cap = player['capacity'] + 2
+    return price, next_cap
+
 #Main UI
 #------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------
@@ -511,20 +520,32 @@ def quit_to_main_menu():
 # This function loads the shop
 def show_shop_menu(player):
     global game_state
+    price, next_cap = get_backpack_upgrade_info(player)
     print()
     print("----------------------- Shop Menu -------------------------")
     print("(P)ickaxe upgrade to Level 2 to mine silver ore for 50 GP")
-    print("(B)ackpack upgrade to carry 12 items for 20 GP")
+    print(f"(B)ackpack upgrade to carry {next_cap} items for {price} GP")
     print("(M)agic torch that increases view to 5x5 for 50 GP")
     print("(L)eave shop")
     print("-----------------------------------------------------------")
-    print("GP:")
+    print(f"Your GP: {player['GP']}")
     print("-----------------------------------------------------------")
-    playerinput = get_key()
+    playerinput = get_key("Your choice? ")
     if playerinput == "l":
         game_state = GAMESTATE_TOWN
+        return
     elif playerinput == "b":
-        upgrade_backpack(player)
+        if can_afford_upgrade(player):
+            upgrade_backpack(player)
+        else:
+            print("Not enough GP for upgrade.")
+            press_to_return()
+    elif playerinput == "p":
+        print("Pickaxe upgrade not implemented yet.")
+        press_to_return()
+    elif playerinput == "m":
+        print("Magic torch not implemented yet.")
+        press_to_return()
 
 def get_player_name():
     clear_screen()
@@ -538,7 +559,7 @@ def show_main_menu():
     print("You spent all your money to get the deed to a mine, a small")
     print("  backpack, a simple pickaxe and a magical portal stone.")
     print()
-    print("How quickly can you get the 1000 GP you need to retire")
+    print("How quickly can you get the 500 GP you need to retire")
     print("  and live happily ever after?")
     print("-----------------------------------------------------------")
     print()
@@ -663,4 +684,7 @@ while game_state != GAMESTATE_QUIT:
     clear_screen()
 
 print("quitting game")
+
+
+ 
 
