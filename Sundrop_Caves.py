@@ -125,6 +125,9 @@ def load_game(game_map, fog, player, path="save.json"):
         player.clear()
         player.update(state["player"])
 
+        global VIEW_SIZE
+        VIEW_SIZE = 5 if player.get('has_torch') else 3
+
         fog.clear()
         fog.extend(state["fog"])
 
