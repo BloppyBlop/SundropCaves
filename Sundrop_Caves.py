@@ -310,10 +310,15 @@ def add_ore_to_inventory(player, ore_tile, count):
         player['silver'] += count
     elif ore_tile == "G":
         player['gold'] += count
-        
-def award_ore_info(ore_tile, count):
-    ore_name = mineral_names[ore_tile]  # "C" -> "copper"
-    print(f"You mined {count} piece(s) of {ore_name}!")
+
+def award_ore_info(ore_tile, node_pieces, can_carry):
+    ore_name = mineral_names[ore_tile]
+    print(f"You mined {node_pieces} piece(s) of {ore_name}.")
+    if node_pieces > can_carry:
+        if can_carry <= 0:
+            print("...but your backpack is already full!")
+        else:
+            print(f"...but you can only carry {can_carry} more piece(s)!")
     press_to_return()
 
 def consume_tile_and_turn(game_map, player):
@@ -332,13 +337,13 @@ def mine_tile(player, game_map):
     mined = max(0, min(pieces, remaining))
 
     if mined == 0:
-        print("Your backpack is full! You can’t carry any more.")
+        print("You can't carry any more, so you can't go that way.")
         press_to_return()
         return
 
     # add to inventory and report
     add_ore_to_inventory(player, tile, mined)
-    award_ore_info(tile, mined)
+    award_ore_info(tile, pieces, remaining)
 
     # consume the node and keep exploring
     game_map[player['y']][player['x']] = " "
@@ -389,11 +394,11 @@ def try_step(dir_key, game_map, player):
         if is_full(player):
             print("You can't carry any more, so you can't go that way.")
             press_to_return()
-            return False
+            return True   # spend a turn, but DO NOT move
         if not can_mine(tile, player):
-            print("Your pickaxe isn't strong enough for this ore!")
+            print("Your pickaxe isn’t strong enough for this ore!")
             press_to_return()
-            return False
+            return True   # spend a turn, but DO NOT move
 
     # success
     player['x'], player['y'] = nx, ny
@@ -426,6 +431,26 @@ def upgrade_backpack(player):
         print("Not enough GP for upgrade.")
         press_to_return()
 
+def calc_sale_total(player):
+    total = 0
+    for _ in range(player['copper']): total += ore_value("C")
+    for _ in range(player['silver']): total += ore_value("S")
+    for _ in range(player['gold']):   total += ore_value("G")
+    return total
+
+def deposit_gp(player, amount):
+    player['GP'] += amount
+
+def clear_inventory(player):
+    player['copper'] = 0
+    player['silver'] = 0
+    player['gold']   = 0
+
+def announce_sale(total):
+    print(f"you sold your haul for {total} GP!")
+    print(f"You now have {player['GP']} GP!")
+    press_to_return()
+
 #Main UI
 #------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------
@@ -442,7 +467,7 @@ def show_information(player):
     print("Portal Position: (0, 0)")
     print("Pickaxe level: 1 (copper)")
     print("------------------------------")
-    print(f"Load: 0/10")
+    print(f"Load: {current_load(player)}")
     print("------------------------------")
     print(f"GP: {player['GP']}")
     print(f"Steps taken: {player['steps']} ")
@@ -455,7 +480,7 @@ def quit_to_main_menu():
     if ans in ("y", "yes"):
         game_state = GAMESTATE_MAIN
     elif ans in ("n", "no"):
-        press_to_return()
+        return
     else:
         print("Invalid option, just press Enter to return.")
         press_to_return()
@@ -558,6 +583,11 @@ def show_mine_menu(game_map, fog, player):
     print()
     playerinput = get_key("Action?")
     if playerinput == "p":
+        total = calc_sale_total(player)
+        if total > 0:
+            deposit_gp(player, total)
+            clear_inventory(player)
+            announce_sale(total)
         game_state = GAMESTATE_TOWN
     elif playerinput == "q":
         quit_to_main_menu()
@@ -573,12 +603,19 @@ def show_mine_menu(game_map, fog, player):
         handle_turns(fog, player, game_map)
 
 def end_day(player):
-    print("Your day is over! Heading back to town...")
+    print("You are exhausted.")
+    print("You place your portal stone here and zap back to town. ")
+    total = calc_sale_total(player)
+    if total > 0:
+        deposit_gp(player, total)
+        clear_inventory(player)
+        announce_sale(total)  
     player['day'] += 1
     player['turns'] = TURNS_PER_DAY
     global game_state
     game_state = GAMESTATE_TOWN
-    press_to_return()
+    if total == 0:
+        press_to_return()
 
 #--------------------------- MAIN GAME ---------------------------
 # TODO: The game!
