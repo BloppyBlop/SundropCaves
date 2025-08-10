@@ -270,7 +270,7 @@ def initialize_player(player): #sets default stats and flags
     player['copper'] = 0
     player['silver'] = 0
     player['gold'] = 0
-    player['GP'] = 480
+    player['GP'] = 0
     player['day'] = 1
     player['steps'] = 0
     player['turns'] = TURNS_PER_DAY
