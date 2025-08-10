@@ -568,7 +568,7 @@ def show_information(player):
     print(f"Name: {player['name']} ")
     print(f"Portal Position: ({player.get(PORTAL_KEY_X)}, {player.get(PORTAL_KEY_Y)})")
     print(f"Pickaxe Level: {player['pickaxe_level']} ({pickaxe_name(player)})")
-    print(f"Load: {current_load(player)}")
+    print(f"Load: {current_load(player)} / {player['capacity']}")
     print("------------------------------")
     print(f"GP: {player['GP']}")
     print(f"Steps taken: {player['steps']} ")
