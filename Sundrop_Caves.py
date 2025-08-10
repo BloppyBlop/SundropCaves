@@ -70,6 +70,8 @@ prices['gold'] = (10, 18)
 
 TORCH_PRICE = 50
 
+original_map = []
+
 #------------------------------------------------------------------------------------
 #Helpers
 #------------------------------------------------------------------------------------
@@ -83,7 +85,7 @@ def clear_screen():
         os.system('clear')
 
 def get_input(prompt="Your Choice? "):
-    return input(prompt).strip().lower()
+    return input(prompt).strip()
 
 def get_key(prompt=" "):
     if is_win32():
@@ -168,6 +170,9 @@ def load_map(filename, map_struct):
     
     MAP_WIDTH = len(map_struct[0])
     MAP_HEIGHT = len(map_struct)
+
+    global original_map
+    original_map = [row[:] for row in map_struct]
 
     map_file.close()
 
@@ -292,6 +297,26 @@ def viewport_tile(x, y, px, py, game_map, player): #decide what to show at (x,y)
 #------------------------------------------------------------------------------------
 #Mining
 #------------------------------------------------------------------------------------
+
+def replenish_nodes(game_map, chance=0.2):
+    restored = 0
+    for y in range(MAP_HEIGHT):
+        for x in range(MAP_WIDTH):
+            if original_map[y][x] in ("C", "S", "G"):
+                if game_map[y][x] == " ":
+                    if randint(1, 100) <= int(chance * 100):
+                        game_map[y][x] = original_map[y][x]
+                        restored += 1
+    return restored
+
+def show_replenish_notice(player):
+    pending = player.pop('pending_replenish', None)
+    if pending is None:
+        return  # nothing to show
+    if pending:
+        print(f"{pending} node(s) replenished overnight!")
+    else:
+        print("No nodes replenished today.")
 
 def pieces_from_node(tile):
     if tile == "C": return randint(1, 5)
@@ -441,6 +466,18 @@ def handle_turns(fog, player, game_map):
 #Shop
 #------------------------------------------------------------------------------------
 
+def sell_haul(player, announce=True):
+    total = calc_sale_total(player)
+    if total > 0:
+        deposit_gp(player, total)
+        clear_inventory(player)
+        if announce:
+            announce_sale(total)       
+    else:
+        if announce:
+            announce_no_sale(player)   
+    return total
+
 def upgrade_price(player):
     return player['capacity'] * 2
 
@@ -474,7 +511,7 @@ def clear_inventory(player):
     player['gold']   = 0
 
 def announce_sale(total):
-    print(f"you sold your haul for {total} GP!")
+    print(f"You sold your haul for {total} GP!")
     print(f"You now have {player['GP']} GP!")
     press_to_return()
 
@@ -677,9 +714,10 @@ def show_mine_menu(game_map, fog, player):
     #draw_map(game_map, fog, player)
     global game_state
     print()
-    print("------------------------")
+    print("--------The Mine--------")
     print(f"Day {player['day']}".center(len("---------------------")))
     print("------------------------")
+    show_replenish_notice(player)
     draw_view(game_map, fog, player, size=VIEW_SIZE)
     print("----- MINE MENU -----")
     print("(WASD) to move")
@@ -692,18 +730,15 @@ def show_mine_menu(game_map, fog, player):
     playerinput = get_key("Action?")
     if playerinput == "p":
         place_portal_here(player)
-        print("You place your portal stone here and zap back to town. ")
-        total = calc_sale_total(player)
-        if total > 0:
-            deposit_gp(player, total)
-            clear_inventory(player)
-            announce_sale(total)
-            if maybe_win(player):
-                return
-        else:
-            announce_no_sale(player)
+        print("You place your portal stone here and zap back to town.")
+
+        total = sell_haul(player, announce=True)  
+        if maybe_win(player):
+            return
+
         player['day'] += 1
         player['turns'] = TURNS_PER_DAY
+        player['pending_replenish'] = replenish_nodes(game_map, 0.2)
         game_state = GAMESTATE_TOWN
     elif playerinput == "q":
         quit_to_main_menu()
@@ -737,22 +772,10 @@ def initialize_game(game_map, fog, player):
 
 def end_day(player):
     place_portal_here(player)
-    total = calc_sale_total(player)
-    if total > 0:
-        deposit_gp(player, total)
-        clear_inventory(player)
-    if maybe_win(player):
-        return
     print("You are exhausted.")
     print("You place your portal stone here and zap back to town.")
-    if total > 0:
-        print(f"You sold your haul for {total} GP!")
-        print(f"You now have {player['GP']} GP!")
-    else:
-        print("You have nothing to sell.")
-        print(f"You still have {player['GP']} GP!")
-    press_to_return()
-
+    sell_haul(player, announce=True)
+    player['pending_replenish'] = replenish_nodes(game_map, 0.2)
     player['day'] += 1
     player['turns'] = TURNS_PER_DAY
     global game_state
