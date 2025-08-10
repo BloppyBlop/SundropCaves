@@ -270,7 +270,7 @@ def initialize_player(player): #sets default stats and flags
     player['copper'] = 0
     player['silver'] = 0
     player['gold'] = 0
-    player['GP'] = 0
+    player['GP'] = 499
     player['day'] = 1
     player['steps'] = 0
     player['turns'] = TURNS_PER_DAY
@@ -728,6 +728,8 @@ def show_main_menu():
 
 def show_town_menu():
     global game_state
+    if maybe_win(player):
+        return
     print()
     # TODO: Show Day
     print("------Sundrop Town------")
@@ -824,6 +826,8 @@ def end_day(player):
     print("You are exhausted.")
     print("You place your portal stone here and zap back to town.")
     sell_haul(player, announce=True)
+    if maybe_win(player):
+        return  # 
     player['pending_replenish'] = replenish_nodes(game_map, 0.2)
     player['day'] += 1
     player['turns'] = TURNS_PER_DAY
