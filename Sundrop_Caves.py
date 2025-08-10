@@ -270,7 +270,7 @@ def initialize_player(player): #sets default stats and flags
     player['copper'] = 0
     player['silver'] = 0
     player['gold'] = 0
-    player['GP'] = 499
+    player['GP'] = 480
     player['day'] = 1
     player['steps'] = 0
     player['turns'] = TURNS_PER_DAY
@@ -279,6 +279,7 @@ def initialize_player(player): #sets default stats and flags
     player[PORTAL_KEY_X] = 0
     player[PORTAL_KEY_Y] = 0
     player['has_torch'] = False
+    player['score_submitted'] = False
 
 def current_load(p): #total ore pieces in the backpack.
     return p.get('copper', 0) + p.get('silver', 0) + p.get('gold', 0)
@@ -781,12 +782,10 @@ def show_mine_menu(game_map, fog, player):
     playerinput = get_key("Action?")
     if playerinput == "p":
         place_portal_here(player)
-        print("You place your portal stone here and zap back to town.")
-
         total = sell_haul(player, announce=True)  
         if maybe_win(player):
             return
-
+        print("You place your portal stone here and zap back to town.")
         player['day'] += 1
         player['turns'] = TURNS_PER_DAY
         player['pending_replenish'] = replenish_nodes(game_map, 0.2)
@@ -844,11 +843,14 @@ def maybe_win(player):
         # use current day/steps for stats
         print(f"And it only took you {player['day']} days and {player['steps']} steps! You win!")
         print("-----------------------------------------------------------")
-        add_score_from_player(player)
+        if not player.get('score_submitted'):
+            add_score_from_player(player)
+            player['score_submitted'] = True
+
         press_to_return()
         game_state = GAMESTATE_MAIN
         return True
-    return False 
+    return False
 
 #--------------------------- MAIN GAME ---------------------------
 # TODO: The game! Main loop using a finite state machine. 
