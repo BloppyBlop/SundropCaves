@@ -1,7 +1,7 @@
 #Lewis Ng Zheng Loong
 #S10268542C IM01
-#Global Constants and Helpers
 #------------------------------------------------------------------------------------
+#Global Constants and Helpers
 #------------------------------------------------------------------------------------
 from random import randint
 import os
@@ -70,10 +70,9 @@ prices['gold'] = (10, 18)
 
 TORCH_PRICE = 50
 
-#Other Functions
 #------------------------------------------------------------------------------------
+#Helpers
 #------------------------------------------------------------------------------------
-
 def is_win32():
     return platform.system() == "Windows"    
 
@@ -96,8 +95,12 @@ def get_key(prompt=" "):
 def press_to_return():
     get_key("Press any key to return...")
 
-#GAMESAVE Functions
+#checks if position is inside or outside the map
+def in_bounds(x, y):
+    return 0 <= x < MAP_WIDTH and 0 <= y < MAP_HEIGHT
+
 #------------------------------------------------------------------------------------
+#GAMESAVE
 #------------------------------------------------------------------------------------
 
 # This function saves the game
@@ -147,30 +150,10 @@ def confirm_overwrite_if_save_exists(path="save.json"):
         return ans == "y"
     return True
 
-def initialize_player(player):
-    player['name'] = ""
-    player['x'] = 0
-    player['y'] = 0
-    player['copper'] = 0
-    player['silver'] = 0
-    player['gold'] = 0
-    player['GP'] = 0
-    player['day'] = 1
-    player['steps'] = 0
-    player['turns'] = TURNS_PER_DAY
-    player['pickaxe_level'] = 1
-    player['capacity'] = 10
-    player[PORTAL_KEY_X] = 0
-    player[PORTAL_KEY_Y] = 0
-    player['has_torch'] = False
-
-
-#World Generation + Exploration Functions
 #------------------------------------------------------------------------------------
+#Map
 #------------------------------------------------------------------------------------
 
-# This function loads a map structure (a nested list) from a file
-# It also updates MAP_WIDTH and MAP_HEIGHT
 def load_map(filename, map_struct):
     map_file = open(filename, 'r')
     global MAP_WIDTH
@@ -223,6 +206,41 @@ def map_tile(x, y, game_map, fog, player): #what to show on the full map
         return MAPMARKER_FOG
     return get_tile_marker(x, y, game_map, player)
 
+#------------------------------------------------------------------------------------
+#Player
+#------------------------------------------------------------------------------------
+
+def initialize_player(player):
+    player['name'] = ""
+    player['x'] = 0
+    player['y'] = 0
+    player['copper'] = 0
+    player['silver'] = 0
+    player['gold'] = 0
+    player['GP'] = 0
+    player['day'] = 1
+    player['steps'] = 0
+    player['turns'] = TURNS_PER_DAY
+    player['pickaxe_level'] = 1
+    player['capacity'] = 10
+    player[PORTAL_KEY_X] = 0
+    player[PORTAL_KEY_Y] = 0
+    player['has_torch'] = False
+
+def current_load(p):
+    return p.get('copper', 0) + p.get('silver', 0) + p.get('gold', 0)
+
+def is_full(p):
+    return current_load(p) >= p['capacity']
+
+def place_portal_here(player):
+    player[PORTAL_KEY_X] = player['x']
+    player[PORTAL_KEY_Y] = player['y']
+
+#------------------------------------------------------------------------------------
+#Drawing
+#------------------------------------------------------------------------------------
+
 # This function draws the entire map, covered by the fog
 def draw_map(game_map, fog, player):
     print(viewport_border(MAP_WIDTH))  # top border
@@ -232,37 +250,6 @@ def draw_map(game_map, fog, player):
         print(BORDER_VERTICAL + "".join(row) + BORDER_VERTICAL)
 
     print(viewport_border(MAP_WIDTH))  # bottom border
-
-def initialize_game(game_map, fog, player):
-    # initialize map
-    load_map("level1.txt", game_map)
-
-    # TODO: initialize fog
-    initialize_fog(fog)
-    
-    # TODO: initialize player
-    initialize_player(player)
-    
-
-    clear_fog(fog, player)   
-
-def viewport_border(inner_width):
-    return BORDER_CORNER + (BORDER_HORIZONTAL * inner_width) + BORDER_CORNER
-
-def viewport_half(size):
-    return size // 2
-
-def viewport_tile(x, y, px, py, game_map, player): #decide what to show at (x,y) in the viewport.
-    if (x, y) == (px, py):
-        return MAPMARKER_PLAYER
-    if not in_bounds(x, y):
-        return WALL_CHAR
-    
-    portal_pos = (player.get(PORTAL_KEY_X), player.get(PORTAL_KEY_Y))
-    if (x, y) == portal_pos:
-        return game_map[y][x]
-    return get_tile_marker(x, y, game_map, player)
-
 
 # This function draws the 3x3/5x5 viewport
 def draw_view(game_map, fog, player, size=VIEW_SIZE):
@@ -285,23 +272,32 @@ def draw_view(game_map, fog, player, size=VIEW_SIZE):
     # bottom border
     print(viewport_border(size))
 
-#Mining Features
+def viewport_border(inner_width):
+    return BORDER_CORNER + (BORDER_HORIZONTAL * inner_width) + BORDER_CORNER
+
+def viewport_half(size):
+    return size // 2
+
+def viewport_tile(x, y, px, py, game_map, player): #decide what to show at (x,y) in the viewport.
+    if (x, y) == (px, py):
+        return MAPMARKER_PLAYER
+    if not in_bounds(x, y):
+        return WALL_CHAR
+    
+    portal_pos = (player.get(PORTAL_KEY_X), player.get(PORTAL_KEY_Y))
+    if (x, y) == portal_pos:
+        return game_map[y][x]
+    return get_tile_marker(x, y, game_map, player)
+
 #------------------------------------------------------------------------------------
+#Mining
 #------------------------------------------------------------------------------------
+
 def pieces_from_node(tile):
     if tile == "C": return randint(1, 5)
     if tile == "S": return randint(1, 3)
     if tile == "G": return randint(1, 2)
     return 0
-
-def current_load(p):
-    return p.get('copper', 0) + p.get('silver', 0) + p.get('gold', 0)
-
-def is_full(p):
-    return current_load(p) >= p['capacity']
-
-def get_tile_under_player(player, game_map):
-    return game_map[player['y']][player['x']]
 
 def can_mine(tile, player):
     if tile == "C":  # copper
@@ -366,22 +362,19 @@ def mine_tile(player, game_map):
     # consume the node and keep exploring
     game_map[player['y']][player['x']] = " "
 
-def current_load(p):
-    return p.get('copper',0) + p.get('silver',0) + p.get('gold',0)
-
-def is_full(p):
-    return current_load(p) >= p['capacity']
-
-def place_portal_here(player):
-    player[PORTAL_KEY_X] = player['x']
-    player[PORTAL_KEY_Y] = player['y']
-
-#MPlayer Movement
 #------------------------------------------------------------------------------------
+#Movement
 #------------------------------------------------------------------------------------
+
 def post_move(fog, player, game_map):
     clear_fog(fog, player)
     mine_tile(player, game_map)
+    if get_tile_under_player(player, game_map) == MAPMARKER_TOWN:
+        global game_state
+        print("You arrive at Sundrop Town.")
+        press_to_return()
+        game_state = GAMESTATE_TOWN
+        return
     if player['turns'] <= 0:
         end_day(player)
 
@@ -396,6 +389,9 @@ def is_walkable(x, y, game_map, player):
         return can_mine(tile, player)
 
     return tile in WALKABLE
+
+def get_tile_under_player(player, game_map):
+    return game_map[player['y']][player['x']]
 
 def can_attempt_move(dir_key, player):
     return dir_key in MOVES and player['turns'] > 0
@@ -441,9 +437,10 @@ def handle_turns(fog, player, game_map):
     if player['turns'] <= 0:
         end_day(player)
 
-#Shop Features
 #------------------------------------------------------------------------------------
+#Shop
 #------------------------------------------------------------------------------------
+
 def upgrade_price(player):
     return player['capacity'] * 2
 
@@ -554,16 +551,10 @@ def buy_magic_torch(player):
     print("The cavern glows! Your view is now 5x5.")
     press_to_return()
 
-
-#Main UI
 #------------------------------------------------------------------------------------
+#Menus
 #------------------------------------------------------------------------------------
 
-#checks if position is inside or outside the map
-def in_bounds(x, y):
-    return 0 <= x < MAP_WIDTH and 0 <= y < MAP_HEIGHT
-
-# This function shows the information for the player
 def show_information(player):
     print()
     print("----- Player Information -----")
@@ -727,6 +718,23 @@ def show_mine_menu(game_map, fog, player):
     elif try_step(playerinput, game_map, player):
         handle_turns(fog, player, game_map)
 
+#------------------------------------------------------------------------------------
+#Gameflow
+#------------------------------------------------------------------------------------
+
+def initialize_game(game_map, fog, player):
+    # initialize map
+    load_map("level1.txt", game_map)
+
+    # TODO: initialize fog
+    initialize_fog(fog)
+    
+    # TODO: initialize player
+    initialize_player(player)
+    
+
+    clear_fog(fog, player)  
+
 def end_day(player):
     place_portal_here(player)
     total = calc_sale_total(player)
@@ -763,7 +771,7 @@ def maybe_win(player):
         press_to_return()
         game_state = GAMESTATE_MAIN
         return True
-    return False
+    return False 
 
 #--------------------------- MAIN GAME ---------------------------
 # TODO: The game!
