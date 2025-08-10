@@ -106,8 +106,8 @@ def in_bounds(x, y): #returns if (x,y) is inside the current map rectangle using
 #GAMESAVE
 #------------------------------------------------------------------------------------
 
-def serialize_game_data(player, fog, path): #builds a dict with player and fog and writes JSON to path.
-    state = {"player": player, "fog": fog}
+def serialize_game_data(player, fog, game_map, path): #builds a dict with player and fog and writes JSON to path.
+    state = {"player": player, "fog": fog, "map": game_map}
     with open(path, "w") as f:
         json.dump(state, f)
 
@@ -126,7 +126,7 @@ def save_game(game_map, fog, player, path="save.json"): #asks permission via con
         print("Okay, didn’t save. Keeping your old file safe.")
         return
     else:
-        serialize_game_data(player, fog, path) 
+        serialize_game_data(player, fog, game_map, path) 
         print("Game saved.")                  
         
 # This function loads the game
@@ -143,6 +143,11 @@ def load_game(game_map, fog, player, path="save.json"):
 
         fog.clear()
         fog.extend(state["fog"]) #Replace current fog with the saved fog grid (again, mutate in-place).
+
+        if "map" in state:
+            game_map.clear()
+            for row in state["map"]:
+                game_map.append(row[:])
 
         print("Game loaded!")
         return True
