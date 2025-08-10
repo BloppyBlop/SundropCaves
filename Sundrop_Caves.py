@@ -72,50 +72,56 @@ TORCH_PRICE = 50
 
 original_map = []
 
+SCORES_PATH = "scores.json"
+
 #------------------------------------------------------------------------------------
 #Helpers
 #------------------------------------------------------------------------------------
-def is_win32():
+def is_win32(): #returns True if OS is Windows. Used to decide whether to use msvcrt for single-key input.
     return platform.system() == "Windows"    
 
-def clear_screen():
+def clear_screen(): #clears the console with cls (Windows) or clear (others).
     if is_win32(): 
         os.system('cls')
     else:
         os.system('clear')
 
-def get_input(prompt="Your Choice? "):
+def get_input(prompt="Your Choice? "): #custom player input prompt
     return input(prompt).strip()
 
-def get_key(prompt=" "):
+def get_key(prompt=" "): #prints a prompt that on windows reads one key via msvcrt.getch(), otherwise falls back to get_input().
     if is_win32():
         print(prompt)
         return msvcrt.getch().decode().lower()
     else:
         return get_input(prompt)    
 
-def press_to_return():
+def press_to_return(): #standard "Press any key" pause using get_key().
     get_key("Press any key to return...")
 
-#checks if position is inside or outside the map
-def in_bounds(x, y):
+def in_bounds(x, y): #returns if (x,y) is inside the current map rectangle using MAP_WIDTH/HEIGHT.
     return 0 <= x < MAP_WIDTH and 0 <= y < MAP_HEIGHT
 
 #------------------------------------------------------------------------------------
 #GAMESAVE
 #------------------------------------------------------------------------------------
 
-# This function saves the game
-def serialize_game_data(player, fog, path):
+def serialize_game_data(player, fog, path): #builds a dict with player and fog and writes JSON to path.
     state = {"player": player, "fog": fog}
     with open(path, "w") as f:
         json.dump(state, f)
 
-def deserialize_game_data(path):
+def deserialize_game_data(path): #reads JSON and returns it.
     with open(path, "r") as f:
         return json.load(f)
+    
+def confirm_overwrite_if_save_exists(path="save.json"): #returns True if saving is allowed (no file or user presses Y), else False.
+    if os.path.exists(path):
+        ans = get_key("A save file already exists. Overwrite it? (Y/N): ")
+        return ans == "y"
+    return True
 
-def save_game(game_map, fog, player, path="save.json"):
+def save_game(game_map, fog, player, path="save.json"): #asks permission via confirm_overwrite_if_save_exists() and if OK, calls serialize_game_data() and prints confirmation.
     if not confirm_overwrite_if_save_exists(path):
         print("Okay, didn’t save. Keeping your old file safe.")
         return
@@ -126,31 +132,69 @@ def save_game(game_map, fog, player, path="save.json"):
 # This function loads the game
 def load_game(game_map, fog, player, path="save.json"):
     try:
-        state = deserialize_game_data(path)
-        load_map("level1.txt", game_map)
+        state = deserialize_game_data(path) #Opens path and reads JSON into a Python dict called state.
+        load_map("level1.txt", game_map) #Rebuilds the base cave layout from the level file into game_map. 
 
-        player.clear()
-        player.update(state["player"])
+        player.clear() #empties the dict in-place and fills it with the saved keys/values.
+        player.update(state["player"]) #Replace current player data with the saved one.
 
         global VIEW_SIZE
-        VIEW_SIZE = 5 if player.get('has_torch') else 3
+        VIEW_SIZE = 5 if player.get('has_torch') else 3 #checks if player owns torch and sets viewport accordingly
 
         fog.clear()
-        fog.extend(state["fog"])
+        fog.extend(state["fog"]) #Replace current fog with the saved fog grid (again, mutate in-place).
 
         print("Game loaded!")
         return True
     except (FileNotFoundError, KeyError):
         print("no valid save found.")
         press_to_return()
-        return False
-    
-def confirm_overwrite_if_save_exists(path="save.json"):
-    # returns True if it's okay to start a new game (overwrite), False if user cancels
-    if os.path.exists(path):
-        ans = get_key("A save file already exists. Overwrite it? (Y/N): ")
-        return ans == "y"
-    return True
+        return False #If the save file doesn’t exist (FileNotFoundError) or the JSON is missing expected keys like "player" or "fog" (KeyError), show a message, wait for a key, and return False.
+
+#------------------------------------------------------------------------------------
+#Gameflow
+#------------------------------------------------------------------------------------
+
+def _score_key(rec):
+    return (rec.get("days", 0), rec.get("steps", 0), -rec.get("gp", 0), rec.get("name","").lower())
+
+def load_scores(path=SCORES_PATH):
+    try:
+        with open(path, "r") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
+def save_scores(scores, path=SCORES_PATH):
+    with open(path, "w") as f:
+        json.dump(scores, f)
+
+def add_score_from_player(player, path=SCORES_PATH):
+    scores = load_scores(path)
+    rec = {
+        "name": player.get("name","Unknown"),
+        "days": player.get("day", 0),
+        "steps": player.get("steps", 0),
+        "gp": player.get("GP", 0),
+    }
+    scores.append(rec)
+    scores.sort(key=_score_key)
+    save_scores(scores, path)
+
+def show_high_scores(path=SCORES_PATH):
+    clear_screen()
+    print("----- Top Miners of Sundrop Mountain -----")
+    scores = load_scores(path)
+    if not scores:
+        print("No scores yet. Be the first to retire rich!")
+        press_to_return()
+        return
+
+    print("Rank  Name            Days  Steps     GP")
+    print("-------------------------------------------")
+    for i, rec in enumerate(scores[:5], start=1):
+        print(f"{i:>4}  {rec['name']:<14} {rec['days']:>4}  {rec['steps']:>5}  {rec['gp']:>7}")
+    press_to_return()
 
 #------------------------------------------------------------------------------------
 #Map
@@ -663,7 +707,7 @@ def show_main_menu():
     print("--- Main Menu ----")
     print("(N)ew game")                
     print("(L)oad saved game")
-#    print("(H)igh scores")
+    print("(T)op scores")
     print("(Q)uit")    
     print("------------------")
     playerinput = get_key()
@@ -674,6 +718,8 @@ def show_main_menu():
     elif playerinput == "l": 
         if load_game(game_map, fog, player):
             game_state = GAMESTATE_TOWN
+    elif playerinput == "t":             
+        show_high_scores()
     elif playerinput == "q":
         game_state = GAMESTATE_QUIT
 
@@ -791,6 +837,7 @@ def maybe_win(player):
         # use current day/steps for stats
         print(f"And it only took you {player['day']} days and {player['steps']} steps! You win!")
         print("-----------------------------------------------------------")
+        add_score_from_player(player)
         press_to_return()
         game_state = GAMESTATE_MAIN
         return True
