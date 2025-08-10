@@ -821,37 +821,45 @@ def initialize_game(game_map, fog, player):
     clear_fog(fog, player)  
 
 def end_day(player):
-    place_portal_here(player) #place_portal_here(player) so the town portal is where you ended.
+    place_portal_here(player)
+    earned = sell_haul(player, announce=False)
+
+    if maybe_win(player):   # already_paused defaults to True
+        return
+
     print("You are exhausted.")
     print("You place your portal stone here and zap back to town.")
-    sell_haul(player, announce=True)
-    if maybe_win(player):
-        return  # 
+
+    if earned > 0:
+        announce_sale(earned)
+    else:
+        announce_no_sale(player)
+
     player['pending_replenish'] = replenish_nodes(game_map, 0.2)
     player['day'] += 1
     player['turns'] = TURNS_PER_DAY
     global game_state
     game_state = GAMESTATE_TOWN
 
-def maybe_win(player):
+
+def maybe_win(player, already_paused=True):
     global game_state
     if player['GP'] >= WIN_GP:
         clear_screen()
         print("-----------------------------------------------------------")
         print(f"Woo-hoo! Well done, {player['name']}, you have {player['GP']} GP!")
         print("You now have enough to retire and play video games every day.")
-        # use current day/steps for stats
         print(f"And it only took you {player['day']} days and {player['steps']} steps! You win!")
         print("-----------------------------------------------------------")
         if not player.get('score_submitted'):
             add_score_from_player(player)
             player['score_submitted'] = True
 
-        press_to_return()
+        if already_paused:  # only pause if we didn't pause elsewhere
+            press_to_return()
         game_state = GAMESTATE_MAIN
         return True
     return False
-
 #--------------------------- MAIN GAME ---------------------------
 # TODO: The game! Main loop using a finite state machine. 
 clear_screen()
