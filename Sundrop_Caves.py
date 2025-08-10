@@ -1,3 +1,5 @@
+#Lewis Ng Zheng Loong
+#S10268542C IM01
 #Global Constants and Helpers
 #------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------
@@ -651,8 +653,9 @@ def show_town_menu():
     global game_state
     print()
     # TODO: Show Day
-    print(f"Day {player['day']}") 
-    print("----- Sundrop Town -----")
+    print("------Sundrop Town------")
+    print(f"Day {player['day']}".center(len("----- Sundrop Town -----")))
+    print("------------------------")
     print("(B)uy stuff")
     print("See Player (I)nformation")
     print("See Mine (M)ap")
@@ -682,7 +685,10 @@ def show_town_menu():
 def show_mine_menu(game_map, fog, player):
     #draw_map(game_map, fog, player)
     global game_state
-    print(f"Day {player['day']}")
+    print()
+    print("------------------------")
+    print(f"Day {player['day']}".center(len("---------------------")))
+    print("------------------------")
     draw_view(game_map, fog, player, size=VIEW_SIZE)
     print("----- MINE MENU -----")
     print("(WASD) to move")
