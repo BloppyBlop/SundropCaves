@@ -375,12 +375,22 @@ def is_walkable(x, y, game_map, player):
 
     return tile in WALKABLE
 
+def can_attempt_move(dir_key, player):
+    return dir_key in MOVES and player['turns'] > 0
+
+def get_target_position(dir_key, player):
+    dx, dy = MOVES[dir_key]
+    return player['x'] + dx, player['y'] + dy
+
+def move_player(player, x, y):
+    player['x'], player['y'] = x, y
+    player['steps'] += 1
+
 def try_step(dir_key, game_map, player):
-    if dir_key not in MOVES or player['turns'] <= 0:
+    if not can_attempt_move(dir_key, player):
         return False
 
-    dx, dy = MOVES[dir_key]
-    nx, ny = player['x'] + dx, player['y'] + dy
+    nx, ny = get_target_position(dir_key, player)
 
     if not in_bounds(nx, ny):
         print("You bump into the wall.")
@@ -389,20 +399,18 @@ def try_step(dir_key, game_map, player):
 
     tile = game_map[ny][nx]
 
-    # ore gate: can't enter if full or can't mine
     if tile in {"C", "S", "G"}:
         if is_full(player):
             print("You can't carry any more, so you can't go that way.")
             press_to_return()
-            return True   # spend a turn, but DO NOT move
+            return True  # spend a turn, no movement
         if not can_mine(tile, player):
             print("Your pickaxe isn’t strong enough for this ore!")
             press_to_return()
-            return True   # spend a turn, but DO NOT move
+            return True  # spend a turn, no movement
 
-    # success
-    player['x'], player['y'] = nx, ny
-    player['steps'] += 1
+    # success: move and spend a turn
+    move_player(player, nx, ny)
     return True
 
 def handle_turns(fog, player, game_map):
