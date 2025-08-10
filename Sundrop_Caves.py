@@ -411,7 +411,7 @@ def handle_turns(fog, player, game_map):
     if player['turns'] <= 0:
         end_day(player)
 
-#Shop Upgrades
+#Shop Features
 #------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------
 def upgrade_price(player):
@@ -450,6 +450,11 @@ def announce_sale(total):
     print(f"you sold your haul for {total} GP!")
     print(f"You now have {player['GP']} GP!")
     press_to_return()
+
+def announce_no_sale(player):
+    print("You have nothing to sell.")
+    print(f"You still have {player['GP']} GP!")
+    press_to_return()    
 
 #Main UI
 #------------------------------------------------------------------------------------
@@ -583,11 +588,16 @@ def show_mine_menu(game_map, fog, player):
     print()
     playerinput = get_key("Action?")
     if playerinput == "p":
+        print("You place your portal stone here and zap back to town. ")
         total = calc_sale_total(player)
         if total > 0:
             deposit_gp(player, total)
             clear_inventory(player)
             announce_sale(total)
+        else:
+            announce_no_sale(player)
+        player['day'] += 1
+        player['turns'] = TURNS_PER_DAY
         game_state = GAMESTATE_TOWN
     elif playerinput == "q":
         quit_to_main_menu()
